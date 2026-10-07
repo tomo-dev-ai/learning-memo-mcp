@@ -71,11 +71,13 @@ claude mcp add learning-memo --transport stdio --scope user --env MEMO_DIR=C:\wo
 # MEMO_DIR 未設定で直接起動すると、エラーログを出して終了する
 node dist/index.js
 # → [learning-memo-mcp] ... 環境変数 MEMO_DIR が設定されていません。…
+
+# 存在しないフォルダを指定した場合も、起動時にエラーログを出して終了する
+# → [learning-memo-mcp] ... MEMO_DIR のフォルダが見つかりません: C:\work\存在しない
 ```
 
 ## 既知の制約・今後の改善
 
-- `MEMO_DIR` が存在しないフォルダでも起動してしまう(検索時にエラーとして返る)→ 起動時にフォルダの存在を確認する
 - 単純な部分一致検索のため、言い換え(例:「ベクトルDB」と「pgvector」)は見つけられない
   → 既存の RAG(ai-chat-app、pgvector による意味検索)を呼び出す Tool の追加を検討
 - 指定した日付のメモを全文返す Tool の追加

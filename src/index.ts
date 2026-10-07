@@ -1,3 +1,4 @@
+import { existsSync, statSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -13,6 +14,10 @@ function log(message: string): void {
 const MEMO_DIR = process.env.MEMO_DIR;
 if (!MEMO_DIR) {
   log("環境変数 MEMO_DIR が設定されていません。学習メモのフォルダを指定してください。");
+  process.exit(1);
+}
+if (!existsSync(MEMO_DIR) || !statSync(MEMO_DIR).isDirectory()) {
+  log(`MEMO_DIR のフォルダが見つかりません: ${MEMO_DIR}`);
   process.exit(1);
 }
 
