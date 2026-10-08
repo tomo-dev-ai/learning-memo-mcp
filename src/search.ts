@@ -70,3 +70,26 @@ export async function getMemoByDate(
   const content = await readFile(path.join(memoDir, rel), "utf-8");
   return { date, file: rel, content };
 }
+
+/** 直前・直後のメモの日付(なければ null) */
+export type NeighborDates = {
+  prev: string | null;
+  next: string | null;
+};
+
+/**
+ * 指定した日付より前で一番新しいメモの日付(prev)と、後で一番古いメモの日付(next)を返す。
+ * get_memo_by_date でメモがなかったときに、LLM が1日ずつ探し回らなくて済むようにするため
+ */
+export async function findNeighborDates(memoDir: string, date: string): Promise<NeighborDates> {
+  // listMemoFiles は新しい順なので、dates も新しい順(例: 2026-10-07, 2026-10-06, 2026-09-25)
+  const dates = (await listMemoFiles(memoDir))
+    .map((rel) => MEMO_FILE_PATTERN.exec(path.basename(rel)))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => `${m[1]}-${m[2]}-${m[3]}`);
+
+  // YYYY-MM-DD 形式の文字列は、文字列の大小比較がそのまま日付の前後になる
+  const prev = dates.find((d) => d < date) ?? null; // 新しい順で最初に見つかる「前の日付」= 直前
+  const next = dates.filter((d) => d > date).at(-1) ?? null; // 「後の日付」のうち最後(一番古い)= 直後
+  return { prev, next };
+}

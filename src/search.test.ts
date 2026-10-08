@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { getMemoByDate, listMemoFiles, searchMemos } from "./search.js";
+import { findNeighborDates, getMemoByDate, listMemoFiles, searchMemos } from "./search.js";
 
 // 本物の学習メモ(C:\work\学習)は使わず、テストのたびに一時フォルダへテスト用のメモを作る
 // → 学習メモが増えても結果が変わらない・誰のPCでも同じ結果になる
@@ -78,5 +78,28 @@ describe("getMemoByDate", () => {
 
   test("パスのような値を渡しても MEMO_DIR の外は読まない(null を返す)", async () => {
     expect(await getMemoByDate(memoDir, "../../secret")).toBeNull();
+  });
+});
+
+describe("findNeighborDates", () => {
+  test("メモがない日付の、直前と直後のメモの日付を返す", async () => {
+    expect(await findNeighborDates(memoDir, "2026-10-03")).toEqual({
+      prev: "2026-09-25",
+      next: "2026-10-06",
+    });
+  });
+
+  test("最新のメモより後の日付なら、next は null", async () => {
+    expect(await findNeighborDates(memoDir, "2026-12-01")).toEqual({
+      prev: "2026-10-07",
+      next: null,
+    });
+  });
+
+  test("最初のメモより前の日付なら、prev は null", async () => {
+    expect(await findNeighborDates(memoDir, "2026-01-01")).toEqual({
+      prev: null,
+      next: "2026-09-25",
+    });
   });
 });

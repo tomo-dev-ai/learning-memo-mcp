@@ -31,7 +31,7 @@ AI が自分で適切な Tool(`search_memos` / `get_memo_by_date`)を選んで�
 | Tool | 種類 | 引数 | 戻り値 |
 |---|---|---|---|
 | `search_memos` | read-only | `query`: 検索キーワード(1〜100文字)<br>`limit`: 最大件数(1〜50、既定20) | `[日付] ファイル名:行番号` と、キーワードを含む行(新しい日付順) |
-| `get_memo_by_date` | read-only | `date`: 日付(`YYYY-MM-DD` 形式) | `[日付] ファイル名` と、その日のメモの全文。メモがない日は「メモはありません」(エラー扱いにしない) |
+| `get_memo_by_date` | read-only | `date`: 日付(`YYYY-MM-DD` 形式) | `[日付] ファイル名` と、その日のメモの全文。メモがない日は「メモはありません」と直前・直後のメモの日付(エラー扱いにしない。LLM が1日ずつ探し回らずに済む) |
 
 - 対象ファイル: `MEMO_DIR` 以下(サブフォルダを含む)の `YYYYMMDD_学習メモ.txt`
 - 大文字・小文字は区別しない
@@ -44,7 +44,7 @@ AI が自分で適切な Tool(`search_memos` / `get_memo_by_date`)を選んで�
 | セキュリティ | 読むフォルダは環境変数 `MEMO_DIR` で Server 側に固定し、AI からパスを指定できないようにした。`get_memo_by_date` も入力は日付だけで、入力からパスを組み立てず `MEMO_DIR` 内のファイル一覧と照合する(パストラバーサル対策。単体テストで確認)。書き込み系の Tool は持たない |
 | 入力チェック | zod で引数の型・範囲を定義し、範囲外は SDK が自動で拒否する(`limit` の上限で、LLM が大量件数を要求しても返す量を抑える) |
 | エラー処理 | 例外は Server を落とさず `isError: true` で返し、LLM が失敗を認識できるようにした。「その日のメモがない」は正常な結果として返す(isError を付けない)。`MEMO_DIR` 未設定時は起動時にエラーログを出して終了する |
-| テスト | Vitest で単体テスト(7件)。本物の学習メモではなく一時フォルダにテスト用のメモを作るため、メモが増えても結果が変わらない |
+| テスト | Vitest で単体テスト(10件)。本物の学習メモではなく一時フォルダにテスト用のメモを作るため、メモが増えても結果が変わらない |
 | ログ | stdio では標準出力が Host との通信(MCP メッセージ)専用のため、ログはすべて `console.error`(標準エラー出力)に出す |
 
 ## 必要なもの
@@ -77,7 +77,7 @@ claude mcp add learning-memo --transport stdio --scope user --env MEMO_DIR=C:\wo
 npm test
 ```
 
-- `src/search.test.ts`:`listMemoFiles` / `searchMemos` / `getMemoByDate` の単体テスト
+- `src/search.test.ts`:`listMemoFiles` / `searchMemos` / `getMemoByDate` / `findNeighborDates` の単体テスト
 - テストファイルは `tsconfig.build.json` でビルド対象から除外(`dist` には含まれない)。エディタの型チェックは `tsconfig.json` で対象に含める
 
 ## 動作確認
@@ -95,7 +95,6 @@ node dist/index.js
 
 - 単純な部分一致検索のため、言い換え(例:「ベクトルDB」と「pgvector」)は見つけられない
   → 既存の RAG(ai-chat-app、pgvector による意味検索)を呼び出す Tool の追加を検討
-- `get_memo_by_date` でメモがない日に、直前・直後のメモの日付を添えて返す(LLM が1日ずつ探す呼び出しを減らす)
 
 ## 技術スタック
 

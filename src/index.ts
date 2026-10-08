@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { getMemoByDate, searchMemos } from "./search.js";
+import { findNeighborDates, getMemoByDate, searchMemos } from "./search.js";
 
 // stdio の Server では、標準出力(stdout)は Host との通信専用。
 // console.log を使うと通信が壊れるので、ログは必ず console.error(標準エラー出力)に書く。
@@ -86,8 +86,11 @@ server.registerTool(
 
       // 「その日のメモがない」は Tool の失敗ではなく正常な結果なので isError を付けない
       if (!memo) {
+        // 前後のメモの日付を添えて、LLM が1日ずつ探し回る呼び出しを減らす
+        const { prev, next } = await findNeighborDates(MEMO_DIR, date);
+        const hint = `直前のメモ: ${prev ?? "なし"} / 直後のメモ: ${next ?? "なし"}`;
         return {
-          content: [{ type: "text", text: `${date} の学習メモはありません。` }],
+          content: [{ type: "text", text: `${date} の学習メモはありません。${hint}` }],
         };
       }
       return {
