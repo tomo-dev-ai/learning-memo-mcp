@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { searchMemos } from "./search.js";
+import { getMemoByDate, searchMemos } from "./search.js";
 
 // stdio の Server では、標準出力(stdout)は Host との通信専用。
 // console.log を使うと通信が壊れるので、ログは必ず console.error(標準エラー出力)に書く。
@@ -57,6 +57,47 @@ server.registerTool(
       // isError: true で返すと、LLM は「Tool が失敗した」と分かり、別の手を考えられる
       return {
         content: [{ type: "text", text: `学習メモの検索中にエラーが発生しました: ${message}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.registerTool(
+  "get_memo_by_date",
+  {
+    title: "学習メモ取得(日付指定)",
+    description:
+      "智博さんの日次の学習メモ(2026年9月〜)のうち、指定した1日分の全文を返す。" +
+      "「10/6に何をしたか」「その日の理解確認テストの結果」など、特定の日の内容をまとめて知りたいときに使う。" +
+      "キーワードを含む日を探すときは search_memos を使う。学習をしなかった日はメモが存在しない。",
+    inputSchema: {
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "日付は YYYY-MM-DD 形式で指定してください")
+        .describe("取得する日付(例: 2026-10-06)"),
+    },
+    annotations: { readOnlyHint: true },
+  },
+  async ({ date }) => {
+    try {
+      const memo = await getMemoByDate(MEMO_DIR, date);
+      log(`get_memo_by_date date=${date} found=${memo !== null}`);
+
+      // 「その日のメモがない」は Tool の失敗ではなく正常な結果なので isError を付けない
+      if (!memo) {
+        return {
+          content: [{ type: "text", text: `${date} の学習メモはありません。` }],
+        };
+      }
+      return {
+        content: [{ type: "text", text: `[${memo.date}] ${memo.file}\n\n${memo.content}` }],
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`get_memo_by_date でエラー: ${message}`);
+      return {
+        content: [{ type: "text", text: `学習メモの取得中にエラーが発生しました: ${message}` }],
         isError: true,
       };
     }

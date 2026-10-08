@@ -46,3 +46,27 @@ export async function searchMemos(
   }
   return hits;
 }
+
+/** 日付指定で取得した学習メモ1件分 */
+export type MemoDocument = {
+  date: string; // 例: 2026-10-06
+  file: string; // MEMO_DIRからの相対パス
+  content: string; // ファイルの全文
+};
+
+/**
+ * 指定した日付(YYYY-MM-DD)の学習メモを返す。見つからなければ null。
+ * 入力からパスを組み立てず、listMemoFiles() の一覧の中から探す(MEMO_DIR の外は読めない)
+ */
+export async function getMemoByDate(
+  memoDir: string,
+  date: string,
+): Promise<MemoDocument | null> {
+  const fileName = `${date.replaceAll("-", "")}_学習メモ.txt`; // 2026-10-06 → 20261006_学習メモ.txt
+  const files = await listMemoFiles(memoDir);
+  const rel = files.find((f) => path.basename(f) === fileName);
+  if (!rel) return null;
+
+  const content = await readFile(path.join(memoDir, rel), "utf-8");
+  return { date, file: rel, content };
+}
