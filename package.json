@@ -1,7 +1,7 @@
 {
   "name": "learning-memo-mcp",
-  "version": "0.1.0",
-  "description": "学習メモをキーワード検索するMCP Server(stdio)",
+  "version": "0.2.0",
+  "description": "学習メモをキーワード検索・日付指定・意味検索(RAG)するMCP Server(stdio)",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
